@@ -61,7 +61,7 @@ if (PHP_SAPI == 'cli') {
 	$to=$_GET['to'];
 }
 //часть программного кода, вынесенная в отдельную функцию, которая осуществляет подключение к почтовому ящику, аргумент функции - название папки в почтовом ящике, например "Отправленные"
-function connecting_to_mailbox($mailfolder) {
+function getMailbox($mailfolder) {
 	//подключаемся к почтовому ящику
 	$mailbox = @imap_open("{imap.gmail.com:993/imap/ssl}".imap_utf8_to_mutf7($mailfolder), "login", "password");
 	//если подключение к почтовому ящику удалось
@@ -75,7 +75,7 @@ function connecting_to_mailbox($mailfolder) {
 }
 //часть программного кода, вынесенная в отдельную функцию, которая осуществляет сбор необходимой информации о письме, 
 //аргументы функции: $mailbox - поток к почтовому ящику, $num - номер письма в ящике, $fp - поток к выходному файлу для записи информации о письме
-function letter_information($mailbox, $num, $fp) {
+function getLetterInformation($mailbox, $num, $fp) {
 	//считываем заголовок письма
 	$letter = imap_header($mailbox, $num);
 	//декодируем тему письма
