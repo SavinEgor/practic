@@ -151,7 +151,7 @@ fputcsv($fp, array(iconv("utf-8" ,"windows-1251", "Дата получения")
 //закрываем выходной файл
 fclose($fp);
 //подключение к почтовому ящику и открытие папки "Отправленные"
-$mailbox = connecting_to_mailbox('Отправленные');
+$mailbox = getMailbox('Отправленные');
 //поиск писем в папке по заданным критериям поиска
 $array = imap_search ( $mailbox , $criteria );
 //если нашлось хотя бы одно письмо
@@ -168,7 +168,7 @@ if (!empty($array)) {
 	//перебираем найденные письма
 	foreach ($array as $num) {
 		//вызываем функцию для обработки письма
-		letter_information($mailbox, $num, $fp);
+		getLetterInformation($mailbox, $num, $fp);
 	}
 	//закрываем выходной файл
 	fclose($fp);
@@ -179,7 +179,7 @@ if (!empty($array)) {
 //закрываем поток к почтовому ящику
 imap_close($mailbox);
 //подключение к почтовому ящику в папке по умолчанию ("Входящие")
-$mailbox = connecting_to_mailbox('');
+$mailbox = getMailbox('');
 //поиск писем в папке по заданным критериям поиска
 $array = imap_search ( $mailbox , $criteria );
 //если нашлось хотя бы одно письмо
@@ -196,7 +196,7 @@ if (!empty($array)) {
 	//перебираем найденные письма
 	foreach ($array as $num) {
 		//вызываем функцию для обработки письма
-	letter_information($mailbox, $num, $fp);
+	getLetterInformation($mailbox, $num, $fp);
 	}
 	//закрываем выходной файл
 	fclose($fp);
