@@ -10,38 +10,38 @@ if (PHP_SAPI == 'cli') {
 	//перебираем все параметры запуска, кроме первого
 	for ($i = 1; $i < $argc; $i++) {
 		//поиск символа "=" в параметре, возвращаемое значение - строка, содержащая текст параметра до символа "=" включая его
-		$argument=strstr($argv[$i], "=", TRUE);
+		$inputArgument=strstr($argv[$i], "=", TRUE);
 		//если символ найден
-		if ($argument) {
+		if ($inputArgument) {
 			//убираем символ "=" из строки
-			$argument=str_replace("=", "", $argument);
+			$inputArgument=str_replace("=", "", $inputArgument);
 			//если полученная строка - это текст "date_from"
-			if ($argument == "date_from") {
+			if ($inputArgument == "date_from") {
 				//берем часть параметра справа от символа "=", включая его
-				$argument=strstr($argv[$i], "=", FALSE);
+				$inputArgument=strstr($argv[$i], "=", FALSE);
 				//убираем символ "=" из строки
-				$date_from=str_replace("=", "", $argument);
+				$dateFrom=str_replace("=", "", $inputArgument);
 			}
 			//если полученная строка - это текст "date_to"
-			if ($argument == "date_to") {
+			if ($inputArgument == "date_to") {
 				//берем часть параметра справа от символа "=", включая его
-				$argument=strstr($argv[$i], "=", FALSE);
+				$inputArgument=strstr($argv[$i], "=", FALSE);
 				//убираем символ "=" из строки
-				$date_to=str_replace("=", "", $argument);
+				$dateTo=str_replace("=", "", $inputArgument);
 			}
 			//если полученная строка - это текст "from"
-			if ($argument == "from") {
+			if ($inputArgument == "from") {
 				//берем часть параметра справа от символа "=", включая его
-				$argument=strstr($argv[$i], "=", FALSE);
+				$inputArgument=strstr($argv[$i], "=", FALSE);
 				//убираем символ "=" из строки
-				$from=str_replace("=", "", $argument);
+				$fromEmail=str_replace("=", "", $inputArgument);
 			}
 			//если полученная строка - это текст "to"
-			if ($argument == "to") {
+			if ($inputArgument == "to") {
 				//берем часть параметра справа от символа "=", включая его
-				$argument=strstr($argv[$i], "=", FALSE);
+				$inputArgument=strstr($argv[$i], "=", FALSE);
 				//убираем символ "=" из строки
-				$to=str_replace("=", "", $argument);
+				$toEmail=str_replace("=", "", $inputArgument);
 			}
 		}
 	}
@@ -52,18 +52,18 @@ if (PHP_SAPI == 'cli') {
 		die("Введите параметры фильтрации.");
 	}
 	//осуществляем get-запрос (поиск параметра по ключу-названию из переданных скрипту)
-	$date_from=$_GET['date_from'];
+	$dateFrom=$_GET['date_from'];
 	//осуществляем get-запрос (поиск параметра по ключу-названию из переданных скрипту)
-	$date_to=$_GET['date_to'];
+	$dateTo=$_GET['date_to'];
 	//осуществляем get-запрос (поиск параметра по ключу-названию из переданных скрипту)
-	$from=$_GET['from'];
+	$fromEmail=$_GET['from'];
 	//осуществляем get-запрос (поиск параметра по ключу-названию из переданных скрипту)
-	$to=$_GET['to'];
+	$toEmail=$_GET['to'];
 }
 //часть программного кода, вынесенная в отдельную функцию, которая осуществляет подключение к почтовому ящику, аргумент функции - название папки в почтовом ящике, например "Отправленные"
-function getMailbox($mailfolder) {
+function GetMailbox($mailFolder) {
 	//подключаемся к почтовому ящику
-	$mailbox = @imap_open("{imap.gmail.com:993/imap/ssl}".imap_utf8_to_mutf7($mailfolder), "login", "password");
+	$mailbox = @imap_open("{imap.gmail.com:993/imap/ssl}".imap_utf8_to_mutf7($mailFolder), "login", "password");
 	//если подключение к почтовому ящику удалось
 	if ($mailbox) {
 		//возвращаемое значение - поток почтового ящика
@@ -74,104 +74,102 @@ function getMailbox($mailfolder) {
 	}
 }
 //часть программного кода, вынесенная в отдельную функцию, которая осуществляет сбор необходимой информации о письме, 
-//аргументы функции: $mailbox - поток к почтовому ящику, $num - номер письма в ящике, $fp - поток к выходному файлу для записи информации о письме
-function getLetterInformation($mailbox, $num, $fp) {
+//аргументы функции: $mailbox - поток к почтовому ящику, $letterNumber - номер письма в ящике, $outputFileStream - поток к выходному файлу для записи информации о письме
+function GetLetterInformation($mailbox, $letterNumber, $outputFileStream) {
 	//считываем заголовок письма
-	$letter = imap_header($mailbox, $num);
+	$letterHeader = imap_header($mailbox, $letterNumber);
 	//декодируем тему письма
-	$subject = imap_mime_header_decode($letter->subject);
+	$letterSubject = imap_mime_header_decode($letterHeader->subject);
 	//записываем все части (если их несколько) темы письма в одну строку
-	for ($i = 0; $i < count($subject); $i++) {
-		$subj .= $subject[$i]->text;
+	for ($i = 0; $i < count($letterSubject); $i++) {
+		$subject .= $letterSubject[$i]->text;
 	}
-
 	//вытаскиваем отправителя
-	$elements = $letter->from;
+	$letterSender = $letterHeader->from;
 	//выводим почту отправителя
-	foreach ($elements as $element) {
+	foreach ($letterSender as $element) {
 		$sender = ($element->mailbox)."@".($element->host);
 	}
-
 	//вытаскиваем получателя
-	$elements = $letter->to;
+	$letterReceiver = $letterHeader->to;
 	//выводим почту получателя
-	foreach ($elements as $element) {
+	foreach ($letterReceiver as $element) {
 		$receiver = ($element->mailbox)."@".($element->host);
 	}
 	//считываем дату в формате udate
-	$date = $letter->udate;
+	$date = $letterHeader->udate;
 	//выводим дату в формате день.месяц.год час:минута:секунда
 	$date = date("j.m.Y H:i:s",$date);
 	//проверяем X-EVENT
 	//считываем полный заголовок письма
-	$str = imap_fetchheader($mailbox, $num);
+	$letterHeader = imap_fetchheader($mailbox, $letterNumber);
 	//ищем в заголовке строку "X-EVENT"
-	$position = strpos($str, "X-EVENT");
+	$position = strpos($letterHeader, "X-EVENT");
 	//если такая строка нашлась
 	if ($position) {
 		//считываем текст после "X-EVENT_NAME: " до конца строки
-		$x_event = substr($str, $position+strlen("X-EVENT_NAME: "));
+		$xEventName = substr($letterHeader, $position+strlen("X-EVENT_NAME: "));
 	}
 	//записываем строку (дата получения, email отправителя, email получателя, тема письма, X-EVENT_NAME) в выходной файл
-	fputcsv($fp, array($date,iconv("utf-8" ,"windows-1251", $sender), iconv("utf-8" ,"windows-1251", $receiver), iconv("utf-8" ,"windows-1251", $subj), iconv("utf-8" ,"windows-1251", $x_event)),";");
+	fputcsv($outputFileStream, array($date,iconv("utf-8" ,"windows-1251", $sender), iconv("utf-8" ,"windows-1251", $receiver), iconv("utf-8" ,"windows-1251", $subject), iconv("utf-8" ,"windows-1251", $x_event)),";");
 }
 //заводим строку для хранения параметров поиска
-$criteria = '';
+$criteriaOfSearch = '';
 //если параметр "to" присутствовал при запуске скрипта
-if ($to != null) {
+if ($toEmail != null) {
 	//добавляем его значение в строку
-	$criteria.=' TO '.$to;
+	$criteriaOfSearch.=' TO '.$toEmail;
 }
 //если параметр "from" присутствовал при запуске скрипта
-if ($from != null) {
+if ($fromEmail != null) {
 	//добавляем его значение в строку
-	$criteria .= ' FROM '.$from;
+	$criteriaOfSearch .= ' FROM '.$fromEmail;
 }
 //если параметр "date_from" присутствовал при запуске скрипта
-if ($date_from != null) {
+if ($dateFrom != null) {
 	//добавляем его значение в строку
-	$criteria.=' SINCE "'.date("j F Y",strtotime($date_from)).'"';
+	$criteriaOfSearch.=' SINCE "'.date("j F Y",strtotime($dateFrom)).'"';
 }
 //если параметр "date_to" присутствовал при запуске скрипта
-if ($date_to != null) {
+if ($dateTo != null) {
 	//добавляем его значение в строку
-	$criteria.=' BEFORE "'.date("j F Y",strtotime($date_to)).'"';
+	$criteriaOfSearch.=' BEFORE "'.date("j F Y",strtotime($dateTo)).'"';
 }
 //задаем имя выходного файла, используя дату исполнения скрипта
-$outputfile = date('j.m.Y H-i-s', time()).".csv";
+$outputFileName = date('j.m.Y H-i-s', time()).".csv";
 //открываем файл для записи
-$fp = fopen($outputfile, 'w');
+$outputFileStream = fopen($outputFileName, 'w');
 //если открыть файл не удалось
-if (!$fp) {
+if (!$outputFileStream) {
 	//прекращаем выполнение скрипта и выводим сообщение
 	die("Ошибка записи в файл. ");
 }
 //записываем шапку файла
-fputcsv($fp, array(iconv("utf-8" ,"windows-1251", "Дата получения"),iconv("utf-8" ,"windows-1251", "Email отправителя"), iconv("utf-8" ,"windows-1251", "Email получателя"), iconv("utf-8" ,"windows-1251", "Тема письма"), iconv("utf-8" ,"windows-1251", "X-EVENT_NAME")),";");
+fputcsv($outputFileStream, array(iconv("utf-8" ,"windows-1251", "Дата получения"),iconv("utf-8" ,"windows-1251", "Email отправителя"), iconv("utf-8" ,"windows-1251", "Email получателя"), iconv("utf-8" ,"windows-1251", "Тема письма"), iconv("utf-8" ,"windows-1251", "X-EVENT_NAME")),";");
 //закрываем выходной файл
-fclose($fp);
+fclose($outputFileStream);
 //подключение к почтовому ящику и открытие папки "Отправленные"
-$mailbox = getMailbox('Отправленные');
+$mailbox = GetMailbox('Отправленные');
 //поиск писем в папке по заданным критериям поиска
-$array = imap_search ( $mailbox , $criteria );
+$lettersArray = imap_search ( $mailbox , $criteriaOfSearch );
 //если нашлось хотя бы одно письмо
-if (!empty($array)) {
+if (!empty($lettersArray)) {
 	//выводим сообщение о результатах поиска
-	echo "По заданным параметрам найдено отправленных писем: ".count($array).". ";
+	echo "По заданным параметрам найдено отправленных писем: ".count($lettersArray).". ";
 	//открываем файл для записи
-	$fp = @fopen($outputfile, 'a');
+	$outputFileStream = @fopen($outputFileName, 'a');
 	//если открыть файл не удалось
-	if (!$fp) {
+	if (!$outputFileStream) {
 		//прекращаем выполнение скрипта и выводим сообщение
 		die("Ошибка записи в файл. ");
 	}
 	//перебираем найденные письма
-	foreach ($array as $num) {
+	foreach ($lettersArray as $letterNumber) {
 		//вызываем функцию для обработки письма
-		getLetterInformation($mailbox, $num, $fp);
+		GetLetterInformation($mailbox, $letterNumber, $outputFileStream);
 	}
 	//закрываем выходной файл
-	fclose($fp);
+	fclose($outputFileStream);
 } else {//иначе - писем не найдено
 	//выводим сообщение
 	echo "Отправленных писем по заданным параметрам не найдено. ";
@@ -179,27 +177,27 @@ if (!empty($array)) {
 //закрываем поток к почтовому ящику
 imap_close($mailbox);
 //подключение к почтовому ящику в папке по умолчанию ("Входящие")
-$mailbox = getMailbox('');
+$mailbox = GetMailbox('');
 //поиск писем в папке по заданным критериям поиска
-$array = imap_search ( $mailbox , $criteria );
+$lettersArray = imap_search ( $mailbox , $criteriaOfSearch );
 //если нашлось хотя бы одно письмо
-if (!empty($array)) {
+if (!empty($lettersArray)) {
 	//выводим сообщение о результатах поиска
-	echo "По заданным параметрам найдено входящих писем: ".count($array).". ";
+	echo "По заданным параметрам найдено входящих писем: ".count($lettersArray).". ";
 	//открываем файл для записи
-	$fp = @fopen($outputfile, 'a');
+	$outputFileStream = @fopen($outputFileName, 'a');
 	//если открыть файл не удалось
-	if (!$fp) {
+	if (!$outputFileStream) {
 		//прекращаем выполнение скрипта и выводим сообщение
 		die("Ошибка записи в файл. ");
 	}
 	//перебираем найденные письма
-	foreach ($array as $num) {
+	foreach ($lettersArray as $letterNumber) {
 		//вызываем функцию для обработки письма
-	getLetterInformation($mailbox, $num, $fp);
+	GetLetterInformation($mailbox, $letterNumber, $outputFileStream);
 	}
 	//закрываем выходной файл
-	fclose($fp);
+	fclose($outputFileStream);
 }
 //иначе - писем не найдено
 else 
